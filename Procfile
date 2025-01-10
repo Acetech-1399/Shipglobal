@@ -1,0 +1,1 @@
+web: gunicorn shipglobal_backend.wsgi:application
