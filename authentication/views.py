@@ -7,14 +7,14 @@ from .serializers import *
 from .models import *
 from django.core.mail import send_mail
 from ipware import get_client_ip
-
+import random
+import string
 
 class ProtectedView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         return Response({"message": "Welcome! You are authenticated."})
-
 
 class RegisterView(APIView):
     def post(self, request):
@@ -26,18 +26,9 @@ class RegisterView(APIView):
             User.objects.create_user(**validated_data)
             return Response({"detail": "Registration successful. Please wait for admin approval."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
 class AdminUserApprovalView(APIView):
     permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        if not request.user.is_superuser:
-            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
-
-        # Retrieve users pending approval
-        pending_users = User.objects.filter(is_approved=False)
-        serializer = UserSerializer(pending_users, many=True)
-        return Response(serializer.data)
 
     def patch(self, request, pk):
         if not request.user.is_superuser:
@@ -48,18 +39,24 @@ class AdminUserApprovalView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        user.is_approved = True  # Mark user as approved
+        if user.is_approved:
+            return Response({"detail": "User is already approved."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate unique identifier
+        unique_id = ''.join(random.choices(string.digits, k=5))
+        user.unique_user_id = unique_id
+        user.is_approved = True
         user.save()
 
         # Send account approval email
         send_mail(
             subject="Your Account Has Been Approved",
-            message=f"Dear {user.email},\n\nYour account has been approved. You can now log in with your email address and password.\n\nThank you!",
-            from_email="aamanacetech@gmail.com",  # Replace with your email
+            message=f"Dear {user.username},\n\nYour account has been approved with User ID: {unique_id}. You can now log in.\n\nThank you!",
+            from_email="your_email@example.com",  # Replace with your email
             recipient_list=[user.email],
         )
 
-        return Response({"detail": f"User {user.id} approved successfully."}, status=status.HTTP_200_OK)
+        return Response({"detail": f"User {user.id} approved successfully with ID {unique_id}."}, status=status.HTTP_200_OK)
 
 class AdminRegistrationView(APIView):
     def post(self, request):
@@ -85,7 +82,6 @@ class AdminRegistrationView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
 class UserLoginView(APIView):
     def post(self, request):
         username = request.data.get("username")
@@ -110,8 +106,6 @@ class UserLoginView(APIView):
             }, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
-
-
 
 class AdminLoginView(APIView):
     def post(self, request):
@@ -142,7 +136,6 @@ class AdminLoginView(APIView):
             }, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
-
 
 class MailboxView(APIView):
     permission_classes = [IsAuthenticated]
@@ -175,7 +168,6 @@ class MailboxView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
 class UpdateMailboxPriceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -199,8 +191,6 @@ class UpdateMailboxPriceView(APIView):
 
         except Mailbox.DoesNotExist:
             return Response({"detail": "Mailbox item not found."}, status=status.HTTP_404_NOT_FOUND)
-
-
 
 class Userlist(APIView):
     permission_classes = [IsAuthenticated]
@@ -231,3 +221,37 @@ class UserDetailsWithMailboxView(APIView):
             }, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class GlobalAddressView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        address = GlobalAddress.objects.first()
+        if address:
+            serializer = GlobalAddressSerializer(address)
+            return Response(serializer.data)
+        return Response({"detail": "No global address found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        data = request.data
+        GlobalAddress.objects.all().delete()  # Ensure only one global address exists
+        serializer = GlobalAddressSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        address = GlobalAddress.objects.first()
+        if not address:
+            return Response({"detail": "No global address found to update."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = GlobalAddressSerializer(address, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        GlobalAddress.objects.all().delete()
+        return Response({"detail": "Global address deleted successfully."}, status=status.HTTP_204_NO_CONTENT)

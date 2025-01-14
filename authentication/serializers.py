@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Mailbox
+from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,6 +13,10 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
+    
+    def get_global_address(self, obj):
+        address = GlobalAddress.objects.first()
+        return address.address if address else None
 
 
 class MailboxSerializer(serializers.ModelSerializer):
@@ -33,3 +37,9 @@ class AdminUserApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "is_approved"]
+
+
+class GlobalAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GlobalAddress
+        fields = ['id', 'address']

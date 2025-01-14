@@ -9,7 +9,7 @@ class User(AbstractUser):
     billing_address = models.TextField()
     date_of_birth = models.DateField(null=True, blank=True, default=None)
     is_approved = models.BooleanField(default=False)  # Approval state
-    unique_user_id = models.CharField(max_length=10, blank=True, null=True)  # Admin-assigned unique ID
+    unique_user_id = models.CharField(max_length=10, blank=True, null=False, unique=True)
 
     groups = models.ManyToManyField(
         Group,
@@ -57,3 +57,10 @@ class AdminUser(AbstractUser):
         if self.is_admin_user and not self.allowed_ip:
             raise ValueError("Admin users must have an allowed IP address.")
         super().save(*args, **kwargs)
+
+
+class GlobalAddress(models.Model):
+    address = models.TextField()
+
+    def __str__(self):
+        return self.address
