@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 from .models import *
@@ -145,18 +145,37 @@ class AdminLoginView(APIView):
 
 
 class MailboxView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, user_id):
         mailboxes = Mailbox.objects.filter(user_id=user_id)
         serializer = MailboxSerializer(mailboxes, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = MailboxSerializer(data=request.data)
+        if not request.user.is_superuser:
+            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get("user_id")
+        if not user_id:
+            return Response({"detail": "User ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        data["user"] = user.id
+        serializer = MailboxSerializer(data=data)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    
 class UpdateMailboxPriceView(APIView):
     permission_classes = [IsAuthenticated]
 
