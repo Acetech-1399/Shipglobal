@@ -16,5 +16,6 @@ urlpatterns = [
     path("user_list/", Userlist.as_view(), name="user_list"),
     path("user-details/<int:pk>/", UserDetailsWithMailboxView.as_view(), name="user-details"),
     path("mailbox/update-price/<int:pk>/", UpdateMailboxPriceView.as_view(), name="update-mailbox-price"),
-    path("global-address/", GlobalAddressView.as_view(), name="global-address"),
+    path("global-address/", GlobalAddressView.as_view(), name="global-address-list"),
+    path("global-address/<int:pk>/", GlobalAddressView.as_view(), name="global-address-detail"),
 ]

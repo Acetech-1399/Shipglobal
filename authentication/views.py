@@ -227,35 +227,25 @@ class UserDetailsWithMailboxView(APIView):
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class GlobalAddressView(APIView):
-    permission_classes = [IsAdminUser]
-
     def get(self, request):
-        address = GlobalAddress.objects.first()
-        if address:
-            serializer = GlobalAddressSerializer(address)
-            return Response(serializer.data)
-        return Response({"detail": "No global address found."}, status=status.HTTP_404_NOT_FOUND)
+        # Fetch all addresses
+        addresses = GlobalAddress.objects.all()
+        serializer = GlobalAddressSerializer(addresses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        data = request.data
-        GlobalAddress.objects.all().delete()  # Ensure only one global address exists
-        serializer = GlobalAddressSerializer(data=data)
+        # Allow admin to add a new address
+        serializer = GlobalAddressSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def patch(self, request):
-        address = GlobalAddress.objects.first()
-        if not address:
-            return Response({"detail": "No global address found to update."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = GlobalAddressSerializer(address, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request):
-        GlobalAddress.objects.all().delete()
-        return Response({"detail": "Global address deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    def delete(self, request, pk):
+        # Allow admin to delete an address by ID
+        try:
+            address = GlobalAddress.objects.get(pk=pk)
+            address.delete()
+            return Response({"detail": "Address deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except GlobalAddress.DoesNotExist:
+            return Response({"detail": "Address not found."}, status=status.HTTP_404_NOT_FOUND)

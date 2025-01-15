@@ -42,4 +42,7 @@ class AdminUserApprovalSerializer(serializers.ModelSerializer):
 class GlobalAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = GlobalAddress
-        fields = ['id', 'address']
+        fields = [
+            "id", "country", "address_line_1", "address_line_2",
+            "city", "state", "zip_code", "phone"
+        ]

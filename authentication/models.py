@@ -74,7 +74,13 @@ class AdminUser(AbstractUser):
 
 
 class GlobalAddress(models.Model):
-    address = models.TextField()
+    country = models.CharField(max_length=100)
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    zip_code = models.CharField(max_length=20)
+    phone = models.CharField(max_length=20)
 
     def __str__(self):
-        return self.address
+        return f"{self.address_line_1}, {self.city}, {self.state}, {self.zip_code}"
