@@ -1,6 +1,7 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
-from datetime import date
+from django.core.exceptions import ValidationError
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -9,8 +10,7 @@ class User(AbstractUser):
     billing_address = models.TextField()
     date_of_birth = models.DateField(null=True, blank=True, default=None)
     is_approved = models.BooleanField(default=False)  # Approval state
-    unique_user_id = models.CharField(max_length=10, blank=True, null=False, unique=True)
-
+    unique_user_id = models.CharField(max_length=10, blank=True, unique=True)
     groups = models.ManyToManyField(
         Group,
         related_name="custom_user_set",
@@ -21,6 +21,20 @@ class User(AbstractUser):
         related_name="custom_user_permissions_set",
         blank=True,
     )
+
+    def save(self, *args, **kwargs):
+        # Automatically generate a unique ID if not provided
+        if not self.unique_user_id:
+            self.unique_user_id = uuid.uuid4().hex[:10].upper()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        """
+        Custom validation to ensure unique_user_id remains unique.
+        """
+        super().clean()
+        if self.unique_user_id and User.objects.filter(unique_user_id=self.unique_user_id).exclude(pk=self.pk).exists():
+            raise ValidationError("A user with this unique_user_id already exists.")
 
     def __str__(self):
         return self.username
