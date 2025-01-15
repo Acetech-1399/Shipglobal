@@ -30,6 +30,13 @@ class RegisterView(APIView):
 class AdminUserApprovalView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        pending_users = User.objects.filter(is_approved=False).values("id", "username", "email", "is_approved")
+        return Response(pending_users, status=status.HTTP_200_OK)
+
     def patch(self, request, pk):
         if not request.user.is_superuser:
             return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
@@ -42,21 +49,18 @@ class AdminUserApprovalView(APIView):
         if user.is_approved:
             return Response({"detail": "User is already approved."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Generate unique identifier
-        unique_id = ''.join(random.choices(string.digits, k=5))
-        user.unique_user_id = unique_id
         user.is_approved = True
         user.save()
 
         # Send account approval email
         send_mail(
             subject="Your Account Has Been Approved",
-            message=f"Dear {user.username},\n\nYour account has been approved with User ID: {unique_id}. You can now log in.\n\nThank you!",
+            message=f"Dear {user.username},\n\nYour account has been approved with User ID: {user.unique_user_id}. You can now log in.\n\nThank you!",
             from_email="your_email@example.com",  # Replace with your email
             recipient_list=[user.email],
         )
 
-        return Response({"detail": f"User {user.id} approved successfully with ID {unique_id}."}, status=status.HTTP_200_OK)
+        return Response({"detail": f"User {user.id} approved successfully with ID {user.unique_user_id}."}, status=status.HTTP_200_OK)
 
 class AdminRegistrationView(APIView):
     def post(self, request):
