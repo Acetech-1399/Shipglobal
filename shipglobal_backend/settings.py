@@ -62,16 +62,16 @@ MIDDLEWARE = [
     'authentication.middleware.IPTrackingMiddleware'
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+SIMPLE_JWT = {
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.SlidingToken',),
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=50),  # Adjust this as needed
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),  # Extend user session
 }
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=50),  # Adjust as needed
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.SlidingTokenAuthentication',
+    ),
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
