@@ -3,7 +3,7 @@ import stripe
 import xml.etree.ElementTree as ET
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.conf import settings
 from .models import Shipment
 
@@ -26,11 +26,11 @@ class CostCalculatorView(APIView):
             return Response({"error": "All fields are required"}, status=400)
 
         # ShipGlobal API credentials
-        username = "your_shipglobal_username"
-        password = "your_shipglobal_password"
-        security_key = "your_shipglobal_security_key"
-        authorize_code = "your_shipglobal_authorize_code"
-        account_number = "your_shipglobal_account_number"
+        username = "acetech"
+        password = "6282@Tech"
+        security_key = "6769cebc6eb131.57555604"
+        authorize_code = "105"
+        account_number = "8006282"
 
         # ShipGlobal API URL
         api_url = "https://www.shipglobal.us/api/testshipmentprocess"
@@ -127,27 +127,55 @@ class ConfirmPaymentView(APIView):
         if not session_id:
             return Response({"error": "Session ID is required"}, status=400)
 
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
         try:
             session = stripe.checkout.Session.retrieve(session_id)
 
             if session.payment_status == "paid":
                 user = request.user
-                tracking_number = f"SG{user.id}{int(session.amount_total)}"
+                cost = session.amount_total / 100  # Convert cents to USD
 
-                # Save order details
+                # Create shipment and mark it as paid
                 shipment = Shipment.objects.create(
                     user=user,
-                    tracking_number=tracking_number,
-                    cost=session.amount_total / 100,  # Convert cents to USD
-                    status="Paid",
+                    cost=cost,
+                    paid=True,
+                    status="Awaiting Tracking Number",
                 )
 
                 return Response({
-                    "message": "Payment successful",
-                    "tracking_number": tracking_number,
+                    "message": "Payment successful. Tracking number will be assigned by admin.",
+                    "shipment_id": shipment.id,
                 })
             else:
                 return Response({"error": "Payment not confirmed"}, status=400)
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+
+class AssignTrackingNumberView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]  # Only accessible to admins
+
+    def patch(self, request, shipment_id):
+        try:
+            shipment = Shipment.objects.get(id=shipment_id)
+
+            # Check if the shipment is paid
+            if not shipment.paid:
+                return Response({"error": "Cannot assign tracking number to unpaid shipment."}, status=400)
+
+            tracking_number = request.data.get("tracking_number")
+
+            if not tracking_number:
+                return Response({"error": "Tracking number is required."}, status=400)
+
+            # Update tracking number and status
+            shipment.tracking_number = tracking_number
+            shipment.status = "Tracking Number Assigned"
+            shipment.save()
+
+            return Response({"message": "Tracking number assigned successfully.", "shipment_id": shipment.id})
+        except Shipment.DoesNotExist:
+            return Response({"error": "Shipment not found."}, status=404)

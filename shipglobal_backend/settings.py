@@ -178,3 +178,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "aamanacetech@gmail.com"  # Replace with your email
 EMAIL_HOST_PASSWORD = "mjgi hlwg xths xsxn"  # Replace with your email password
+
+# Stripe Settings
+STRIPE_SECRET_KEY = "sk_test_51QZbI8DYqUXVomcLwlaLiPsSu3PQLSXrxWH0BOXNJmmFxCDeBt51JvEAmKyvIC36ilYnU27ic8dlSzOLj6fCjMqr002OlrHQhV"
+STRIPE_PUBLIC_KEY = "pk_test_51QZbI8DYqUXVomcL6onQ3XSMZ1yzKJJUjLoN6YkKTgWxYc3EkRr30KQJNTjzvXrUvbMvJyvhwCB9GHOrMuFStpw100Y6nEvxK9"
