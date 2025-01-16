@@ -30,7 +30,19 @@ DEBUG = False
 ALLOWED_HOSTS = ["192.168.1.14", "acetech2024.pythonanywhere.com"]
 AUTH_USER_MODEL = 'authentication.User'
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+    "https://acetech-ship-globle.web.app", 
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "https://acetech-ship-globle.web.app",  
+]
+
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies and authentication headers
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]  # Allowed HTTP methods
+CORS_ALLOW_HEADERS = ["Authorization", "Content-Type", "Accept", "X-CSRFToken"]
 
 # Application definition
 
@@ -73,7 +85,7 @@ SIMPLE_JWT = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.SlidingTokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
 
