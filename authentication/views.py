@@ -186,8 +186,10 @@ class UpdateMailboxPriceView(APIView):
 
             # Update the product value (price)
             new_price = request.data.get("product_value")
-            if new_price is not None:
+            new_tracking = request.data.get("tracking_number")
+            if new_price and new_tracking is not None:
                 mailbox_item.product_value = new_price
+                mailbox_item.tracking_number = new_tracking
                 mailbox_item.save()
                 return Response({"detail": "Price updated successfully."}, status=status.HTTP_200_OK)
 
