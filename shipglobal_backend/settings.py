@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-#+b0wl01e9w*%5bc&d64l%%z7!(s0!8d_)p6r)tl(=o*7z&sns
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["192.168.1.14"]
+ALLOWED_HOSTS = ["192.168.1.14", "acetech2024.pythonanywhere.com"]
 AUTH_USER_MODEL = 'authentication.User'
 
 
@@ -63,10 +63,13 @@ MIDDLEWARE = [
 ]
 
 SIMPLE_JWT = {
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.SlidingToken',),
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=50),  # Adjust this as needed
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),  # Extend user session
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=50),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Extends session when refreshed
+    'ROTATE_REFRESH_TOKENS': True,  # Automatically issues a new refresh token upon use
+    'BLACKLIST_AFTER_ROTATION': True,  # Invalidates old refresh tokens
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
