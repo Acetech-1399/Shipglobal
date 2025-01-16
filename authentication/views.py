@@ -234,6 +234,8 @@ class GlobalAddressView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        if not request.user.is_superuser:
+            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
         # Allow admin to add a new address
         serializer = GlobalAddressSerializer(data=request.data)
         if serializer.is_valid():
@@ -242,6 +244,8 @@ class GlobalAddressView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
         # Allow admin to delete an address by ID
         try:
             address = GlobalAddress.objects.get(pk=pk)
