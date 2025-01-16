@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'authentication',
     'Mailbox',
     'address',
+    'shipping',
     'rest_framework',
     'corsheaders',    
 ]

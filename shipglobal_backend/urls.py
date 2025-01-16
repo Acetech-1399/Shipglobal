@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/auth/', include('authentication.urls')),  # Routes for authentication (login/register)
     path('api/Mailbox/', include('Mailbox.urls')),      # Routes for mailbox functionality
     path('api/address/', include('address.urls')),      # Routes for address management
+    path("api/shipping/", include("shipping.urls")),
 ]
 
 if settings.DEBUG:
