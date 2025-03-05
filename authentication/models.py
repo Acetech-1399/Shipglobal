@@ -47,6 +47,8 @@ class Mailbox(models.Model):
     product_value = models.DecimalField(max_digits=10, decimal_places=2)
     tracking_number = models.CharField(max_length=50)
     image = models.ImageField(upload_to="mailbox_images/")
+    weight = models.CharField(max_length=100)
+    dimension = models.CharField(max_length=100)
 
     def __str__(self):
         return f"{self.item_name} ({self.user.username})"

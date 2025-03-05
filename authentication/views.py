@@ -187,13 +187,22 @@ class UpdateMailboxPriceView(APIView):
             # Update the product value (price)
             new_price = request.data.get("product_value")
             new_tracking = request.data.get("tracking_number")
-            if new_price and new_tracking is not None:
-                mailbox_item.product_value = new_price
-                mailbox_item.tracking_number = new_tracking
-                mailbox_item.save()
-                return Response({"detail": "Price updated successfully."}, status=status.HTTP_200_OK)
+            weight = request.data.get("weight")
+            dimension = request.data.get("dimension")
 
-            return Response({"detail": "Product value is required."}, status=status.HTTP_400_BAD_REQUEST)
+            if any(field is not None for field in [new_price, new_tracking, weight, dimension]):
+                if new_price is not None:
+                    mailbox_item.product_value = new_price
+                if new_tracking is not None:
+                    mailbox_item.tracking_number = new_tracking
+                if weight is not None:
+                    mailbox_item.weight = weight
+                if dimension is not None:
+                    mailbox_item.dimension = dimension
+                mailbox_item.save()
+                return Response({"detail": "Update successful."}, status=status.HTTP_200_OK)
+
+            return Response({"detail": "At least one update value is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         except Mailbox.DoesNotExist:
             return Response({"detail": "Mailbox item not found."}, status=status.HTTP_404_NOT_FOUND)

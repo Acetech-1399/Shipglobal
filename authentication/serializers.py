@@ -22,10 +22,10 @@ class UserSerializer(serializers.ModelSerializer):
 class MailboxSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mailbox
-        fields = ["id", "user", "item_name", "product_value", "tracking_number", "image"]
+        fields = ["id", "user", "item_name", "product_value", "tracking_number", "image", "weight", "dimension"]
     class Meta:
         model = Mailbox
-        fields = ["id", "user", "item_name", "product_value", "tracking_number", "image"]
+        fields = ["id", "user", "item_name", "product_value", "tracking_number", "image", "weight", "dimension"]
 
     def get_image(self, obj):
         request = self.context.get("request")
