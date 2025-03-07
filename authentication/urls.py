@@ -13,6 +13,7 @@ urlpatterns = [
     path("protected/", ProtectedView.as_view(), name="protected"),
     path("mailbox/<int:user_id>/", MailboxView.as_view(), name="mailbox-list"),
     path("mailbox/create/", MailboxView.as_view(), name="mailbox-create"),
+    path("mailbox/delete/<int:pk>/", DeleteMailboxView.as_view(), name="mailbox-delete"),
     path("user_list/", Userlist.as_view(), name="user_list"),
     path("user-details/<int:pk>/", UserDetailsWithMailboxView.as_view(), name="user-details"),
     path("mailbox/update-price/<int:pk>/", UpdateMailboxPriceView.as_view(), name="update-mailbox-price"),

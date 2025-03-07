@@ -207,6 +207,19 @@ class UpdateMailboxPriceView(APIView):
         except Mailbox.DoesNotExist:
             return Response({"detail": "Mailbox item not found."}, status=status.HTTP_404_NOT_FOUND)
 
+class DeleteMailboxView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            mailbox_item = Mailbox.objects.get(pk=pk)
+            mailbox_item.delete()
+            return Response({"detail": "Mailbox item deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Mailbox.DoesNotExist:
+            return Response({"detail": "Mailbox item not found."}, status=status.HTTP_404_NOT_FOUND)
+
 class Userlist(APIView):
     permission_classes = [IsAuthenticated]
 
