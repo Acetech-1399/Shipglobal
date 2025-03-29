@@ -6,9 +6,6 @@ from django.core.exceptions import ValidationError
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=15)
-    actual_address = models.TextField()
-    billing_address = models.TextField()
-    date_of_birth = models.DateField(null=True, blank=True, default=None)
     is_approved = models.BooleanField(default=False)  # Approval state
     unique_user_id = models.CharField(max_length=10, blank=True, unique=True)
     groups = models.ManyToManyField(
@@ -38,6 +35,27 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+
+class AddressBook(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='address_book')
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country = models.CharField(max_length=100)
+    zip_code = models.CharField(max_length=20)
+    is_default = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # Set other addresses as not default
+            AddressBook.objects.filter(user=self.user, is_default=True).exclude(id=self.id).update(is_default=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.address_line_1}, {self.city}, {self.country}"
 
 
 

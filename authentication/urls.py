@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import *
+from authentication.views import RegisterView,AdminUserApprovalView,AdminUserApprovalView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
@@ -19,4 +19,13 @@ urlpatterns = [
     path("mailbox/update-price/<int:pk>/", UpdateMailboxPriceView.as_view(), name="update-mailbox-price"),
     path("global-address/", GlobalAddressView.as_view(), name="global-address-list"),
     path("global-address/<int:pk>/", GlobalAddressView.as_view(), name="global-address-detail"),
+    path("addressbook/", AddressBookView.as_view(), name="address-book"),
+    path("addressbook/set-default/<int:pk>/", SetDefaultAddressView.as_view(), name="set-default-address"),
+    path("admin/user/<int:user_id>/addresses/", UserAddressListForAdminView.as_view(), name="admin-user-addresses"),
+    path("password-reset/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path("password-reset-confirm/<uidb64>/<token>/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("paypal/checkout/", PayPalCheckoutView.as_view(), name="paypal-checkout"),
+    path("paypal/execute/", PayPalExecutePaymentView.as_view(), name="paypal-execute"),
+    path("mailbox/checkout-data/", MailboxCheckoutDataView.as_view(), name="mailbox-checkout-data"),
 ]

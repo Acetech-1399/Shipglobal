@@ -27,17 +27,19 @@ SECRET_KEY = 'django-insecure-#+b0wl01e9w*%5bc&d64l%%z7!(s0!8d_)p6r)tl(=o*7z&sns
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["192.168.1.14", "acetech2024.pythonanywhere.com"]
+ALLOWED_HOSTS = ["192.168.1.14", "acetech2024.pythonanywhere.com", "https://acetech-ship-globle.web.app", "http://localhost:5173", "https://shipshopglobal.com"]
 AUTH_USER_MODEL = 'authentication.User'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  
-    "https://acetech-ship-globle.web.app", 
+    "http://localhost:5173",
+    "https://acetech-ship-globle.web.app",
+    "https://shipshopglobal.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "https://acetech-ship-globle.web.app",  
+    "https://acetech-ship-globle.web.app",
+    "https://shipshopglobal.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True  # Allow cookies and authentication headers
@@ -58,18 +60,19 @@ INSTALLED_APPS = [
     'address',
     'shipping',
     'rest_framework',
-    'corsheaders',    
+    'django_extensions',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'authentication.middleware.IPTrackingMiddleware'
@@ -90,7 +93,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'shipglobal_backend.urls'
 

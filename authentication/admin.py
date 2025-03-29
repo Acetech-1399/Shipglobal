@@ -3,7 +3,7 @@ from .models import *
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("username", "email", "phone_number", "date_of_birth")
+    list_display = ("username", "email", "phone_number")
     search_fields = ("username", "email")
 
 @admin.register(Mailbox)
@@ -15,3 +15,8 @@ class MailboxAdmin(admin.ModelAdmin):
 class GlobaAddressAdmin(admin.ModelAdmin):
     list_display = ("country", "state", "zip_code", "phone")
     search_fields = ("country", "state", "zip_code")
+
+@admin.register(AddressBook)
+class AddressBookAdmin(admin.ModelAdmin):
+    list_display = ("user", "address_line_1", "state", "zip_code", "city")
+    search_fields = ("country", "state", "zip_code", "user")
