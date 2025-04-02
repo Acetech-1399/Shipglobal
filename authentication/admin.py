@@ -1,10 +1,15 @@
 from django.contrib import admin
-from .models import *
+from .models import Mailbox, AddressBook, GlobalAddress, User, Banner
+
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ("username", "email", "phone_number")
     search_fields = ("username", "email")
+
+@admin.register(Banner)
+class Banner(admin.ModelAdmin):
+    list_display = ("id", "image", "active")
 
 @admin.register(Mailbox)
 class MailboxAdmin(admin.ModelAdmin):

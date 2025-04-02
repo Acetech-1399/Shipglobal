@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-#+b0wl01e9w*%5bc&d64l%%z7!(s0!8d_)p6r)tl(=o*7z&sns
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["192.168.1.14", "acetech2024.pythonanywhere.com", "https://acetech-ship-globle.web.app", "http://localhost:5173", "https://shipshopglobal.com"]
+ALLOWED_HOSTS = ["192.168.0.111","192.168.1.14", "acetech2024.pythonanywhere.com", "https://acetech-ship-globle.web.app", "http://localhost:5173", "https://shipshopglobal.com"]
 AUTH_USER_MODEL = 'authentication.User'
 
 CORS_ALLOWED_ORIGINS = [
@@ -42,6 +42,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://shipshopglobal.com",
 ]
 
+CORS_ALLOW_ALL_HEADERS = True
 CORS_ALLOW_CREDENTIALS = True  # Allow cookies and authentication headers
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]  # Allowed HTTP methods
 CORS_ALLOW_HEADERS = ["Authorization", "Content-Type", "Accept", "X-CSRFToken"]
@@ -65,8 +66,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -184,3 +185,8 @@ EMAIL_HOST_PASSWORD = "mjgi hlwg xths xsxn"  # Replace with your email password
 # Stripe Settings
 STRIPE_SECRET_KEY = "sk_test_51QZbI8DYqUXVomcLwlaLiPsSu3PQLSXrxWH0BOXNJmmFxCDeBt51JvEAmKyvIC36ilYnU27ic8dlSzOLj6fCjMqr002OlrHQhV"
 STRIPE_PUBLIC_KEY = "pk_test_51QZbI8DYqUXVomcL6onQ3XSMZ1yzKJJUjLoN6YkKTgWxYc3EkRr30KQJNTjzvXrUvbMvJyvhwCB9GHOrMuFStpw100Y6nEvxK9"
+# SHIPGLOBAL_SHIPMENT_URL = "https://www.shipglobal.us/api/shipmentprocess"
+# Or for dev:
+SHIPGLOBAL_LIVE_MODE = False  # Set True in live
+SHIPGLOBAL_SHIPMENT_URL = "https://www.shipglobal.us/api/testshipmentprocess"
+

@@ -8,6 +8,8 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=15)
     is_approved = models.BooleanField(default=False)  # Approval state
     unique_user_id = models.CharField(max_length=10, blank=True, unique=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    is_suspicious = models.BooleanField(default=False)
     groups = models.ManyToManyField(
         Group,
         related_name="custom_user_set",
@@ -36,7 +38,13 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+class BlockedIP(models.Model):
+    ip_address = models.GenericIPAddressField(unique=True)
+    reason = models.CharField(max_length=255, default="Suspicious activity")
+    blocked_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.ip_address
 
 class AddressBook(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='address_book')
@@ -63,10 +71,15 @@ class Mailbox(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mailbox")
     item_name = models.CharField(max_length=100)
     product_value = models.DecimalField(max_digits=10, decimal_places=2)
-    tracking_number = models.CharField(max_length=50)
+    tracking_number = models.CharField(max_length=50, blank=True, null=True)
     image = models.ImageField(upload_to="mailbox_images/")
     weight = models.CharField(max_length=100)
     dimension = models.CharField(max_length=100)
+    shipping_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    label_pdf = models.FileField(upload_to="labels/", null=True, blank=True)
+    invoice_pdf = models.FileField(upload_to="invoices/", null=True, blank=True)
+
+
 
     def __str__(self):
         return f"{self.item_name} ({self.user.username})"
@@ -94,6 +107,7 @@ class AdminUser(AbstractUser):
 
 
 class GlobalAddress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="global_addresses", null=True, blank=True)
     country = models.CharField(max_length=100)
     address_line_1 = models.CharField(max_length=255)
     address_line_2 = models.CharField(max_length=255, blank=True, null=True)
@@ -104,3 +118,12 @@ class GlobalAddress(models.Model):
 
     def __str__(self):
         return f"{self.address_line_1}, {self.city}, {self.state}, {self.zip_code}"
+
+class Banner(models.Model):
+    image = models.ImageField(upload_to="banners/")
+    title = models.CharField(max_length=100, blank=True)
+    active = models.BooleanField(default=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title or f"Banner {self.id}"

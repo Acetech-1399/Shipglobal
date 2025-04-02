@@ -1,7 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from authentication.views import RegisterView,AdminUserApprovalView,AdminUserApprovalView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView
-
+from authentication.views import RegisterView,AdminUserApprovalView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("admin/users/", AdminUserApprovalView.as_view(), name="admin-user-approval"),
@@ -18,7 +17,7 @@ urlpatterns = [
     path("user-details/<int:pk>/", UserDetailsWithMailboxView.as_view(), name="user-details"),
     path("mailbox/update-price/<int:pk>/", UpdateMailboxPriceView.as_view(), name="update-mailbox-price"),
     path("global-address/", GlobalAddressView.as_view(), name="global-address-list"),
-    path("global-address/<int:pk>/", GlobalAddressView.as_view(), name="global-address-detail"),
+    path("global-address/<int:user_id>/", GlobalAddressView.as_view(), name="global-address-detail"),
     path("addressbook/", AddressBookView.as_view(), name="address-book"),
     path("addressbook/set-default/<int:pk>/", SetDefaultAddressView.as_view(), name="set-default-address"),
     path("admin/user/<int:user_id>/addresses/", UserAddressListForAdminView.as_view(), name="admin-user-addresses"),
@@ -28,4 +27,13 @@ urlpatterns = [
     path("paypal/checkout/", PayPalCheckoutView.as_view(), name="paypal-checkout"),
     path("paypal/execute/", PayPalExecutePaymentView.as_view(), name="paypal-execute"),
     path("mailbox/checkout-data/", MailboxCheckoutDataView.as_view(), name="mailbox-checkout-data"),
+    path("generate-username/", GenerateUsername.as_view(), name="generate-username"),
+    path("admin/user/<int:user_id>/delete/", AdminDeleteUserView.as_view(), name="admin-user-delete"),
+    path("admin/suspicious-users/", SuspiciousUserList.as_view(), name="suspicious-users"),
+    path("admin/blocked-ips/<int:user_id>/", BlockedIPList.as_view(), name="blocked-ips"),
+    path("admin/banner/upload/", BannerUploadView.as_view(), name="upload-banner"),
+    path("banners/", BannerListView.as_view(), name="get-banners"),
+    path("admin/banner/delete/<int:banner_id>/", BannerDeleteView.as_view(), name="delete-banner"),
+    path("admin/banner/set-active/<int:banner_id>/", SetActiveBannerView.as_view(), name="set-active-banner"),
+    path("admin/banners/", AdminBannerList.as_view(), name="all-banners"),
 ]

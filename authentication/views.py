@@ -3,17 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import *
-from authentication.models import Mailbox,GlobalAddress,AddressBook
+from authentication.serializers import UserSerializer, MailboxSerializer, GlobalAddressSerializer, AddressBookSerializer, PasswordResetSerializer, PasswordResetConfirmSerializer, ChangePasswordSerializer, BannerSerializer
+from authentication.models import Mailbox,GlobalAddress,AddressBook,BlockedIP, Banner
 from django.core.mail import send_mail
 from ipware import get_client_ip
-import random
-import string
-from django.urls import reverse
 from django.conf import settings
-from datetime import datetime, timedelta
-from datetime import timezone as dt_timezone
-from django.utils import timezone
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -21,9 +15,15 @@ from django.contrib.auth import get_user_model
 import paypalrestsdk
 import logging
 from .utils.invoice import generate_invoice
+import math
+from decimal import Decimal
 from django.core.mail import EmailMessage
 from . import paypal_config
 import os
+from .shipping_price_calculator import load_price_slab, get_price_for_weight
+from shipping.models import Shipment
+from django.utils.timezone import now, timedelta
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 User = get_user_model()
@@ -36,14 +36,82 @@ class ProtectedView(APIView):
 
 class RegisterView(APIView):
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+        data = request.data.copy()
+        client_ip, _ = get_client_ip(request)
+
+        # 🔐 Blocked IP check
+        if BlockedIP.objects.filter(ip_address=client_ip).exists():
+            return Response({"detail": "Registrations from this IP are blocked."}, status=403)
+
+        data['email'] = data.get('email', '').lower()
+        if 'username' in data:
+            data['username'] = data['username'].lower()
+
+        if User.objects.filter(email=data['email']).exists():
+            return Response({"detail": "User with this email already exists."}, status=400)
+
+        # 🔍 Suspicious check: last 10 mins, same IP
+        time_threshold = now() - timedelta(minutes=10)
+        users = User.objects.filter(ip_address=client_ip, date_joined__gte=time_threshold).order_by('-date_joined')
+
+        is_suspicious = False
+        if len(users) >= 2:
+            time_diff = (users[0].date_joined - users[-1].date_joined).total_seconds()
+            if len(users) + 1 >= 3 and time_diff <= 120:  # within 2 mins
+                is_suspicious = True
+
+        serializer = UserSerializer(data=data)
         if serializer.is_valid():
-            # Generate a temporary username based on the email
-            validated_data = serializer.validated_data
-            validated_data["username"] = validated_data["email"].split("@")[0]
-            User.objects.create_user(**validated_data)
-            return Response({"detail": "Registration successful. Please wait for admin approval."}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            user = serializer.save()
+            user.ip_address = client_ip
+            user.is_suspicious = is_suspicious
+            user.save()
+
+            # 🚫 Auto block IP if suspicious
+            if is_suspicious:
+                BlockedIP.objects.get_or_create(ip_address=client_ip)
+
+            return Response({"detail": "Registration successful."}, status=201)
+        return Response(serializer.errors, status=400)
+
+
+class SuspiciousUserList(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        users = User.objects.filter(is_suspicious=True)
+        data = [{"id": u.id, "username": u.username, "email": u.email, "ip": u.ip_address} for u in users]
+        return Response(data)
+
+
+class BlockedIPList(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        blocked = BlockedIP.objects.all().values("ip_address", "reason", "blocked_at")
+        return Response(blocked)
+
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            user.is_suspicious = False
+            user.save()
+            # Optional: unblock IP too
+            BlockedIP.objects.filter(ip_address=user.ip_address).delete()
+            return Response({"detail": "User and IP unblocked."})
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+class GenerateUsername(APIView):
+    def get(self, request):
+        import random
+        import string
+
+        while True:
+            username = "user_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+            if not User.objects.filter(username=username).exists():
+                break
+        return Response({"username": username})
 
 class AdminUserApprovalView(APIView):
     permission_classes = [IsAuthenticated]
@@ -104,9 +172,23 @@ class AdminRegistrationView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class AdminDeleteUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            if user.is_superuser:
+                return Response({"detail": "Cannot delete an admin user."}, status=400)
+            user.delete()
+            return Response({"detail": "User deleted successfully."}, status=204)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+
 class UserLoginView(APIView):
     def post(self, request):
-        username = request.data.get("username")
+        username = request.data.get("username", "").lower()
         password = request.data.get("password")
 
         try:
@@ -125,6 +207,9 @@ class UserLoginView(APIView):
                 "user_id": user.id,
                 "username": user.username,
                 "is_superuser": user.is_superuser,
+                "unique_user_id": user.unique_user_id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
             }, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -155,9 +240,31 @@ class AdminLoginView(APIView):
                 "user_id": user.id,
                 "username": user.username,
                 "is_superuser": user.is_superuser,
+                "unique_user_id": user.unique_user_id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
             }, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+def calculate_shipping_price(mailbox, slab_file_path=None):
+    try:
+        dims = [float(x) for x in mailbox.dimension.split("x")]
+        length, width, height = dims if len(dims) == 3 else (1, 1, 1)
+        volumetric_weight = (length * width * height) / 5000
+        actual_weight = float(mailbox.weight)
+        final_weight = max(volumetric_weight, actual_weight)
+        final_weight = math.ceil(final_weight)  # always round up for slabs
+
+        price_slab = load_price_slab(slab_file_path)
+        price = get_price_for_weight(final_weight, price_slab)
+
+        return Decimal(str(price))  # return as Decimal for DB
+    except Exception as e:
+        print("Shipping price calculation failed:", e)
+        return Decimal("0.00")
+
 
 class MailboxView(APIView):
     permission_classes = [IsAuthenticated]
@@ -186,6 +293,11 @@ class MailboxView(APIView):
 
         if serializer.is_valid():
             serializer.save()
+            mailbox = Mailbox.objects.get(id=serializer.data["id"])
+            shipping_price = calculate_shipping_price(mailbox)  # use dummy or slab file
+            # shipping_price = calculate_shipping_price(mailbox, slab_file_path="shipping_rates.csv")
+            mailbox.shipping_price = shipping_price
+            mailbox.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -247,6 +359,55 @@ class Userlist(APIView):
         non_admin_users = User.objects.filter(is_superuser=False).values("id", "username")
         return Response(non_admin_users, status=status.HTTP_200_OK)
 
+class BannerUploadView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = BannerSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Banner uploaded successfully.", "data": serializer.data})
+        return Response(serializer.errors, status=400)
+
+class BannerListView(APIView):
+    def get(self, request):
+        banners = Banner.objects.filter(active=True)
+        serializer = BannerSerializer(banners, many=True)
+        return Response(serializer.data)
+
+class AdminBannerList(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        banners = Banner.objects.all().order_by('-uploaded_at')
+        serializer = BannerSerializer(banners, many=True)
+        return Response(serializer.data)
+
+class BannerDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def delete(self, request, banner_id):
+        try:
+            banner = Banner.objects.get(pk=banner_id)
+            banner.delete()
+            return Response({"detail": "Banner deleted successfully."})
+        except Banner.DoesNotExist:
+            return Response({"detail": "Banner not found."}, status=404)
+
+class SetActiveBannerView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, banner_id):
+        try:
+            banner = Banner.objects.get(pk=banner_id)
+            banner.active = not banner.active  # Toggle logic
+            banner.save()
+            status_str = "activated" if banner.active else "deactivated"
+            return Response({"detail": f"Banner {status_str} successfully."})
+        except Banner.DoesNotExist:
+            return Response({"detail": "Banner not found."}, status=404)
+
 class UserDetailsWithMailboxView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -297,6 +458,10 @@ class GlobalAddressView(APIView):
             return Response({"detail": "Address deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except GlobalAddress.DoesNotExist:
             return Response({"detail": "Address not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# views.py
+
 
 class UserAddressListForAdminView(APIView):
     permission_classes = [IsAuthenticated]
@@ -407,12 +572,25 @@ class PayPalCheckoutView(APIView):
 
     def post(self, request):
         try:
-            amount = "100.00"
+            item_ids = request.data.get("item_ids", [])
+
+            if not item_ids or not isinstance(item_ids, list):
+                return Response({"detail": "Invalid or missing item_ids."}, status=400)
+
+            # Get mailbox items (for this user or for all if admin)
+            if request.user.is_superuser:
+                mailbox_items = Mailbox.objects.filter(id__in=item_ids)
+            else:
+                mailbox_items = Mailbox.objects.filter(id__in=item_ids, user=request.user)
+
+            if not mailbox_items.exists():
+                return Response({"detail": "No mailbox items found."}, status=404)
+
+            amount = sum(float(item.shipping_price or 0) for item in mailbox_items)
+
             payment = paypalrestsdk.Payment({
                 "intent": "sale",
-                "payer": {
-                    "payment_method": "paypal"
-                },
+                "payer": {"payment_method": "paypal"},
                 "redirect_urls": {
                     "return_url": "https://shipshopglobal.com/payment-success",
                     "cancel_url": "https://shipshopglobal.com/payment-cancel"
@@ -422,13 +600,13 @@ class PayPalCheckoutView(APIView):
                         "items": [{
                             "name": "Mailbox Checkout",
                             "sku": "MBX001",
-                            "price": amount,
+                            "price": "%.2f" % amount,
                             "currency": "USD",
                             "quantity": 1
                         }]
                     },
                     "amount": {
-                        "total": amount,
+                        "total": "%.2f" % amount,
                         "currency": "USD"
                     },
                     "description": "Mailbox item checkout"
@@ -451,6 +629,7 @@ class PayPalCheckoutView(APIView):
             logger.error(traceback.format_exc())
             return Response({"detail": "Server error", "error": str(e)}, status=500)
 
+
 class PayPalExecutePaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -471,12 +650,29 @@ class PayPalExecutePaymentView(APIView):
                 for mailbox in mailbox_items:
                     items.append({
                         "name": mailbox.item_name,
-                        "price": str(mailbox.product_value),
+                        "price": str(mailbox.shipping_price),
                         "weight": mailbox.weight,
                         "dimension": mailbox.dimension,
                         "tracking_number": mailbox.tracking_number,
                     })
+                    # ✅ ALWAYS create shipment record, even if tracking already exists
+                    Shipment.objects.create(
+                        user=mailbox.user,
+                        item_name=mailbox.item_name,
+                        product_value=mailbox.product_value,
+                        tracking_number=mailbox.tracking_number,
+                        image=mailbox.image,
+                        weight=mailbox.weight,
+                        dimension=mailbox.dimension,
+                        shipping_price=mailbox.shipping_price,
+                        label_pdf = mailbox.label_pdf if mailbox.label_pdf and mailbox.label_pdf.name else None,
+                        invoice_pdf = mailbox.invoice_pdf if mailbox.invoice_pdf and mailbox.invoice_pdf.name else None
+                    )
 
+                    mailbox.delete()  # ✅ Clean from mailbox
+
+
+                # ✅ Send invoice email
                 invoice_path = generate_invoice(request.user, payment_id, items)
                 invoice_url = request.build_absolute_uri(
                     settings.MEDIA_URL + "invoices/" + os.path.basename(invoice_path)
@@ -489,7 +685,7 @@ class PayPalExecutePaymentView(APIView):
                 email.send()
 
                 return Response({
-                    "detail": "Payment executed successfully!",
+                    "detail": "Payment & shipment successful!",
                     "invoice_url": invoice_url,
                     "payment_id": payment_id
                 }, status=200)
