@@ -76,7 +76,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'authentication.middleware.IPTrackingMiddleware'
+    'authentication.middleware.IPTrackingMiddleware',
+    'shipglobal_backend.middleware.CustomAuthExceptionMiddleware'
 ]
 
 SIMPLE_JWT = {

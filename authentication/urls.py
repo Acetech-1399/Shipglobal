@@ -1,10 +1,8 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from authentication.views import RegisterView,AdminUserApprovalView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList
+from authentication.views import RegisterView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
-    path("admin/users/", AdminUserApprovalView.as_view(), name="admin-user-approval"),
-    path("admin/users/<int:pk>/", AdminUserApprovalView.as_view(), name="admin-user-approve"),
     path("admin/register/", AdminRegistrationView.as_view(), name="admin-register"),
     path("login/", UserLoginView.as_view(), name="login"),
     path("admin/login/", AdminLoginView.as_view(), name="admin-login"),

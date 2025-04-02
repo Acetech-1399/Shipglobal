@@ -113,40 +113,6 @@ class GenerateUsername(APIView):
                 break
         return Response({"username": username})
 
-class AdminUserApprovalView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        if not request.user.is_superuser:
-            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
-
-        pending_users = User.objects.filter(is_approved=False).values("id", "username", "email", "is_approved")
-        return Response(pending_users, status=status.HTTP_200_OK)
-
-    def patch(self, request, pk):
-        if not request.user.is_superuser:
-            return Response({"detail": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
-
-        try:
-            user = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        if user.is_approved:
-            return Response({"detail": "User is already approved."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.is_approved = True
-        user.save()
-
-        # Send account approval email
-        send_mail(
-            subject="Your Account Has Been Approved",
-            message=f"Dear {user.username},\n\nYour account has been approved with User ID: {user.unique_user_id}. You can now log in.\n\nThank you!",
-            from_email="your_email@example.com",  # Replace with your email
-            recipient_list=[user.email],
-        )
-
-        return Response({"detail": f"User {user.id} approved successfully with ID {user.unique_user_id}."}, status=status.HTTP_200_OK)
 
 class AdminRegistrationView(APIView):
     def post(self, request):
@@ -193,9 +159,6 @@ class UserLoginView(APIView):
 
         try:
             user = User.objects.get(username=username)
-
-            if not user.is_approved:
-                return Response({"detail": "Your account is not approved yet. Please wait for admin approval."}, status=status.HTTP_403_FORBIDDEN)
 
             if not user.check_password(password):
                 return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
