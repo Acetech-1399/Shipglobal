@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to ShipShopGlobal</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f7f9fc;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #ffffff;
+      padding: 40px;
+      border: 1px solid #ddd;
+    }
+
+    .header {
+      background-color: #0b2c48;
+      padding: 20px;
+      text-align: center;
+      color: white;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .section {
+      margin-top: 30px;
+    }
+
+    .section h2 {
+      color: #0b2c48;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+
+    .address-block {
+      background-color: #f1f5fa;
+      padding: 15px;
+      border-left: 4px solid #0b2c48;
+      margin-bottom: 10px;
+    }
+
+    .step {
+      margin-bottom: 10px;
+    }
+
+    .features {
+      list-style: none;
+      padding: 0;
+    }
+
+    .features li::before {
+      content: "✔️";
+      margin-right: 10px;
+      color: #0b2c48;
+    }
+
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .logo {
+      max-width: 180px;
+      margin: 10px auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div style="background-color: white; padding: 10px; border-radius: 8px; display: inline-block;">
+        <img src="{{ logo_url }}" alt="ShipShop Logo" style="max-width: 150px;">
+      </div>
+      <h1>Welcome to ShipShopGlobal!</h1>
+    </div>
+
+
+    <div class="section">
+      <p>Hi {{ first_name }},</p>
+      <p>
+        Welcome to ShipShopGlobal – your personal global shipping solution!
+        You now have access to multiple warehouse addresses that you can use to shop from anywhere in the world and get your packages delivered to your doorstep.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>Your Global Warehouse Addresses</h2>
+
+      {% for address in global_addresses %}
+      <div class="address-block">
+        <strong>{{ address.country }} Warehouse</strong><br>
+        Full Name: {{ full_name }}<br>
+        Unique ID: {{ unique_user_id }}<br>
+        Address Line 1: {{ address.address_line_1 }}<br>
+        Address Line 2: {{ address.address_line_2 }}<br>
+        City: {{ address.city }}<br>
+        State: {{ address.state }}<br>
+        ZIP: {{ address.zip_code }}<br>
+        Phone: {{ address.phone }}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>How It Works</h2>
+      <div class="step">1️⃣ Shop from any online store</div>
+      <div class="step">2️⃣ Use one of your warehouse addresses with your Full Name + Unique ID</div>
+      <div class="step">3️⃣ We receive your parcel and notify you</div>
+      <div class="step">4️⃣ You pay for shipping to your home address</div>
+      <div class="step">5️⃣ We dispatch it with tracking</div>
+    </div>
+
+    <div class="section">
+      <h2>Features Included</h2>
+      <ul class="features">
+        <li>Free global warehouse addresses</li>
+        <li>6 months free storage</li>
+        <li>Package handling & consolidation</li>
+        <li>Tracking & Insurance</li>
+        <li>Up to 80% off shipping</li>
+        <li>Photos on arrival</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      Need help? Contact us at:<br>
+      📧 support@shipshopglobal.com<br>
+      🌐 https://shipshopglobal.com
+    </div>
+  </div>
+</body>
+</html>

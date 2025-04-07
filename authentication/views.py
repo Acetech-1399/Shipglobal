@@ -5,8 +5,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from authentication.serializers import UserSerializer, MailboxSerializer, GlobalAddressSerializer, AddressBookSerializer, PasswordResetSerializer, PasswordResetConfirmSerializer, ChangePasswordSerializer, BannerSerializer
 from authentication.models import Mailbox,GlobalAddress,AddressBook,BlockedIP, Banner
-from django.core.mail import send_mail
-from ipware import get_client_ip
+from django.core.mail import send_mail,EmailMessage
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -17,16 +16,25 @@ import logging
 from .utils.invoice import generate_invoice
 import math
 from decimal import Decimal
-from django.core.mail import EmailMessage
-from . import paypal_config
+from django.core.files import File
 import os
 from .shipping_price_calculator import load_price_slab, get_price_for_weight
 from shipping.models import Shipment
 from django.utils.timezone import now, timedelta
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from io import BytesIO
 
 User = get_user_model()
+
+def get_real_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]  # first IP is client IP
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 class ProtectedView(APIView):
     permission_classes = [IsAuthenticated]
@@ -34,10 +42,45 @@ class ProtectedView(APIView):
     def get(self, request):
         return Response({"message": "Welcome! You are authenticated."})
 
+def send_welcome_email(user):
+    try:
+        global_addresses = GlobalAddress.objects.all()
+        logo_path = os.path.join(settings.MEDIA_ROOT, "images", "logo.png")
+
+        context = {
+            "first_name": user.first_name or "Valued Customer",
+            "full_name": f"{user.first_name or ''} {user.last_name or ''}".strip() or "ShipShop User",
+            "unique_user_id": user.unique_user_id,
+            "global_addresses": global_addresses,
+            "logo_url": f"file://{logo_path}"
+        }
+
+        html_string = render_to_string("welcome_letter.html", context)
+        pdf_file = BytesIO()
+        HTML(string=html_string).write_pdf(pdf_file)
+        pdf_file.seek(0)
+
+        subject = "Welcome to ShipShopGlobal"
+        message = f"""
+        Hi {user.first_name or user.username},
+
+        Welcome to ShipShopGlobal! Attached is your welcome letter PDF with details on how to use your shipping address.
+
+        Thank you,
+        Team ShipShopGlobal
+        """
+
+        email = EmailMessage(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+        email.attach("ShipShopGlobal_Welcome.pdf", pdf_file.read(), "application/pdf")
+        email.send()
+
+    except Exception as e:
+        print("❌ Email send failed:", e)
+
 class RegisterView(APIView):
     def post(self, request):
         data = request.data.copy()
-        client_ip, _ = get_client_ip(request)
+        client_ip = get_real_ip(request)
 
         # 🔐 Blocked IP check
         if BlockedIP.objects.filter(ip_address=client_ip).exists():
@@ -56,9 +99,12 @@ class RegisterView(APIView):
 
         is_suspicious = False
         if len(users) >= 2:
-            time_diff = (users[0].date_joined - users[-1].date_joined).total_seconds()
-            if len(users) + 1 >= 3 and time_diff <= 120:  # within 2 mins
-                is_suspicious = True
+            try:
+                time_diff = (users[0].date_joined - users[-1].date_joined).total_seconds()
+                if len(users) + 1 >= 3 and time_diff <= 120:
+                    is_suspicious = True
+            except IndexError:
+                pass
 
         serializer = UserSerializer(data=data)
         if serializer.is_valid():
@@ -66,12 +112,15 @@ class RegisterView(APIView):
             user.ip_address = client_ip
             user.is_suspicious = is_suspicious
             user.save()
-
             # 🚫 Auto block IP if suspicious
             if is_suspicious:
                 BlockedIP.objects.get_or_create(ip_address=client_ip)
+            response = Response({"detail": "Registration successful."}, status=201)
 
-            return Response({"detail": "Registration successful."}, status=201)
+            # ✉️ Then send mail
+            send_welcome_email(user)
+
+            return response
         return Response(serializer.errors, status=400)
 
 
@@ -116,7 +165,7 @@ class GenerateUsername(APIView):
 
 class AdminRegistrationView(APIView):
     def post(self, request):
-        client_ip, is_routable = get_client_ip(request)
+        client_ip = get_real_ip(request)
         allowed_ip = "192.168.1.8"  # Replace with your specific IP
 
         if client_ip != allowed_ip:
@@ -137,6 +186,47 @@ class AdminRegistrationView(APIView):
             return Response({"detail": "Admin account created successfully."}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminUserShipmentListView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, user_id):
+        shipments = Shipment.objects.filter(user_id=user_id).order_by("-created_at")
+
+        data = [{
+            "id":s.id,
+            "item_name": s.item_name,
+            "product_value": s.product_value,
+            "tracking_number": s.tracking_number,
+            "shipping_price": s.shipping_price,
+            "status": s.status,
+            "weight": s.weight,
+            "dimension": s.dimension,
+            "invoice_url": request.build_absolute_uri(s.invoice_pdf.url) if s.invoice_pdf else None,
+            "image": request.build_absolute_uri(s.image.url) if s.image else None,
+            "created_at": s.created_at
+        } for s in shipments]
+
+        return Response(data, status=200)
+
+class AdminUpdateShipmentStatusView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, shipment_id):
+        try:
+            shipment = Shipment.objects.get(pk=shipment_id)
+            new_status = request.data.get("status")
+
+            if new_status not in dict(Shipment._meta.get_field("status").choices):
+                return Response({"detail": "Invalid status."}, status=400)
+
+            shipment.status = new_status
+            shipment.save()
+
+            return Response({"detail": f"Shipment status updated to '{new_status}'."}, status=200)
+
+        except Shipment.DoesNotExist:
+            return Response({"detail": "Shipment not found."}, status=404)
 
 class AdminDeleteUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -179,7 +269,7 @@ class UserLoginView(APIView):
 
 class AdminLoginView(APIView):
     def post(self, request):
-        client_ip, is_routable = get_client_ip(request)
+        client_ip = get_real_ip(request)
 
         username = request.data.get("username")
         password = request.data.get("password")
@@ -257,8 +347,11 @@ class MailboxView(APIView):
         if serializer.is_valid():
             serializer.save()
             mailbox = Mailbox.objects.get(id=serializer.data["id"])
-            shipping_price = calculate_shipping_price(mailbox)  # use dummy or slab file
-            # shipping_price = calculate_shipping_price(mailbox, slab_file_path="shipping_rates.csv")
+            # shipping_price = calculate_shipping_price(mailbox)  # use dummy or slab file
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            slab_file_path = os.path.join(project_root, "shipping_rates.csv")
+            print("slab file path", slab_file_path)
+            shipping_price = calculate_shipping_price(mailbox, slab_file_path=slab_file_path)
             mailbox.shipping_price = shipping_price
             mailbox.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -618,28 +711,31 @@ class PayPalExecutePaymentView(APIView):
                         "dimension": mailbox.dimension,
                         "tracking_number": mailbox.tracking_number,
                     })
-                    # ✅ ALWAYS create shipment record, even if tracking already exists
-                    Shipment.objects.create(
-                        user=mailbox.user,
-                        item_name=mailbox.item_name,
-                        product_value=mailbox.product_value,
-                        tracking_number=mailbox.tracking_number,
-                        image=mailbox.image,
-                        weight=mailbox.weight,
-                        dimension=mailbox.dimension,
-                        shipping_price=mailbox.shipping_price,
-                        label_pdf = mailbox.label_pdf if mailbox.label_pdf and mailbox.label_pdf.name else None,
-                        invoice_pdf = mailbox.invoice_pdf if mailbox.invoice_pdf and mailbox.invoice_pdf.name else None
-                    )
-
-                    mailbox.delete()  # ✅ Clean from mailbox
-
 
                 # ✅ Send invoice email
                 invoice_path = generate_invoice(request.user, payment_id, items)
+                invoice_filename = os.path.basename(invoice_path)
                 invoice_url = request.build_absolute_uri(
-                    settings.MEDIA_URL + "invoices/" + os.path.basename(invoice_path)
+                    settings.MEDIA_URL + "invoices/" + invoice_filename
                 )
+                # Open the file and save as Django File object
+                with open(invoice_path, "rb") as f:
+                    invoice_file = File(f)
+
+                    for mailbox in mailbox_items:
+                        shipment = Shipment.objects.create(
+                            user=mailbox.user,
+                            item_name=mailbox.item_name,
+                            product_value=mailbox.product_value,
+                            tracking_number=mailbox.tracking_number,
+                            image=mailbox.image,
+                            weight=mailbox.weight,
+                            dimension=mailbox.dimension,
+                            shipping_price=mailbox.shipping_price,
+                            status="in_transit"
+                        )
+                        shipment.invoice_pdf.save(invoice_filename, invoice_file, save=True)
+                        mailbox.delete()
 
                 subject = "Your Payment Invoice - ShipShopGlobal"
                 message = f"Hi {request.user.username},\n\nPlease find attached your invoice for payment ID {payment_id}."
@@ -660,6 +756,7 @@ class PayPalExecutePaymentView(APIView):
             import traceback
             logger.error(traceback.format_exc())
             return Response({"detail": "Server error", "error": str(e)}, status=500)
+
 
 
 
@@ -688,3 +785,33 @@ class MailboxCheckoutDataView(APIView):
             "user_id": request.user.id,
             "user_email": request.user.email,
         }, status=status.HTTP_200_OK)
+
+
+class ShippingCostByWeightView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            final_weight = request.data.get("final_weight")
+
+            if not final_weight:
+                return Response({"detail": "final_weight is required."}, status=400)
+
+            final_weight = math.ceil(float(final_weight))  # round up for slabs
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            slab_file_path = os.path.join(project_root, "shipping_rates.csv")
+            print("slab file path", slab_file_path)
+            price_slab = load_price_slab(slab_file_path)
+            shipping_price = get_price_for_weight(final_weight, price_slab)
+
+            return Response({
+                "final_weight": final_weight,
+                "shipping_price": float(shipping_price)
+            }, status=200)
+
+        except Exception as e:
+            import traceback
+            logger.error(traceback.format_exc())
+            return Response({"detail": "Something went wrong.", "error": str(e)}, status=500)
+
+

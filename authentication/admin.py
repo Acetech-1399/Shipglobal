@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Mailbox, AddressBook, GlobalAddress, User, Banner
+from .models import Mailbox, AddressBook, GlobalAddress, User, Banner,BlockedIP
 
 
 @admin.register(User)
@@ -25,3 +25,8 @@ class GlobaAddressAdmin(admin.ModelAdmin):
 class AddressBookAdmin(admin.ModelAdmin):
     list_display = ("user", "address_line_1", "state", "zip_code", "city")
     search_fields = ("country", "state", "zip_code", "user")
+
+@admin.register(BlockedIP)
+class BlockedIPAdmin(admin.ModelAdmin):
+    list_display = ("ip_address","reason")
+    search_fields = ("ip_address")

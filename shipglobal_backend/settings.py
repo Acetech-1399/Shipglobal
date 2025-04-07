@@ -101,7 +101,7 @@ ROOT_URLCONF = 'shipglobal_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR,"templates")],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -180,8 +180,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "aamanacetech@gmail.com"  # Replace with your email
-EMAIL_HOST_PASSWORD = "mjgi hlwg xths xsxn"  # Replace with your email password
+EMAIL_HOST_USER = "shipshopglobal25@gmail.com"  # Replace with your email
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = "xxta bkem pbpx vhnw"  # Replace with your email password
 
 # Stripe Settings
 STRIPE_SECRET_KEY = "sk_test_51QZbI8DYqUXVomcLwlaLiPsSu3PQLSXrxWH0BOXNJmmFxCDeBt51JvEAmKyvIC36ilYnU27ic8dlSzOLj6fCjMqr002OlrHQhV"
@@ -190,4 +191,5 @@ STRIPE_PUBLIC_KEY = "pk_test_51QZbI8DYqUXVomcL6onQ3XSMZ1yzKJJUjLoN6YkKTgWxYc3EkR
 # Or for dev:
 SHIPGLOBAL_LIVE_MODE = False  # Set True in live
 SHIPGLOBAL_SHIPMENT_URL = "https://www.shipglobal.us/api/testshipmentprocess"
-
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

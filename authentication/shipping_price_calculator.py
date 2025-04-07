@@ -6,8 +6,8 @@ from decimal import Decimal
 # ✅ Dummy weight-to-price mapping
 # Later: load from file
 DUMMY_PRICE_SLAB = {
-    0.5: 5,
-    1: 8,
+    0.5: 0.5,
+    1: 1,
     2: 12,
     3: 16,
     5: 22,

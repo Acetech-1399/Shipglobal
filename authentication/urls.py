@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from authentication.views import RegisterView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList
+from authentication.views import RegisterView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList,AdminUpdateShipmentStatusView,AdminUserShipmentListView,ShippingCostByWeightView
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("admin/register/", AdminRegistrationView.as_view(), name="admin-register"),
@@ -15,7 +15,7 @@ urlpatterns = [
     path("user-details/<int:pk>/", UserDetailsWithMailboxView.as_view(), name="user-details"),
     path("mailbox/update-price/<int:pk>/", UpdateMailboxPriceView.as_view(), name="update-mailbox-price"),
     path("global-address/", GlobalAddressView.as_view(), name="global-address-list"),
-    path("global-address/<int:user_id>/", GlobalAddressView.as_view(), name="global-address-detail"),
+    path("global-address/<int:pk>/", GlobalAddressView.as_view(), name="global-address-detail"),
     path("addressbook/", AddressBookView.as_view(), name="address-book"),
     path("addressbook/set-default/<int:pk>/", SetDefaultAddressView.as_view(), name="set-default-address"),
     path("admin/user/<int:user_id>/addresses/", UserAddressListForAdminView.as_view(), name="admin-user-addresses"),
@@ -34,4 +34,7 @@ urlpatterns = [
     path("admin/banner/delete/<int:banner_id>/", BannerDeleteView.as_view(), name="delete-banner"),
     path("admin/banner/set-active/<int:banner_id>/", SetActiveBannerView.as_view(), name="set-active-banner"),
     path("admin/banners/", AdminBannerList.as_view(), name="all-banners"),
+    path("admin/update-shipment-status/<int:shipment_id>/", AdminUpdateShipmentStatusView.as_view(), name="admin-user-shipments-update"),
+    path("admin/user-shipments/<int:user_id>/", AdminUserShipmentListView.as_view(), name="admin-user-shipments"),
+    path('shipping/price-by-weight/', ShippingCostByWeightView.as_view(), name='shipping-price-by-weight'),
 ]
