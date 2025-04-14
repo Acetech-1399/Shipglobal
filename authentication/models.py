@@ -127,3 +127,12 @@ class Banner(models.Model):
 
     def __str__(self):
         return self.title or f"Banner {self.id}"
+
+class BrandLogo(models.Model):
+    image = models.ImageField(upload_to="brand_logos/")
+    title = models.CharField(max_length=100, blank=True)
+    active = models.BooleanField(default=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title or f"Brand Logo {self.id}"

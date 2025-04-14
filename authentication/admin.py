@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Mailbox, AddressBook, GlobalAddress, User, Banner,BlockedIP
+from .models import Mailbox, AddressBook, GlobalAddress, User, Banner,BlockedIP, BrandLogo
 
 
 @admin.register(User)
@@ -9,6 +9,10 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Banner)
 class Banner(admin.ModelAdmin):
+    list_display = ("id", "image", "active")
+
+@admin.register(BrandLogo)
+class BrandLogo(admin.ModelAdmin):
     list_display = ("id", "image", "active")
 
 @admin.register(Mailbox)
@@ -29,4 +33,4 @@ class AddressBookAdmin(admin.ModelAdmin):
 @admin.register(BlockedIP)
 class BlockedIPAdmin(admin.ModelAdmin):
     list_display = ("ip_address","reason")
-    search_fields = ("ip_address")
+    search_fields = ("ip_address","blocked_at")

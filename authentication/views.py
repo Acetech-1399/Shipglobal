@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from authentication.serializers import UserSerializer, MailboxSerializer, GlobalAddressSerializer, AddressBookSerializer, PasswordResetSerializer, PasswordResetConfirmSerializer, ChangePasswordSerializer, BannerSerializer
-from authentication.models import Mailbox,GlobalAddress,AddressBook,BlockedIP, Banner
+from authentication.serializers import UserSerializer, MailboxSerializer, GlobalAddressSerializer, AddressBookSerializer, PasswordResetSerializer, PasswordResetConfirmSerializer, ChangePasswordSerializer, BannerSerializer, BrandLogoSerializer
+from authentication.models import Mailbox,GlobalAddress,AddressBook,BlockedIP, Banner, BrandLogo
 from django.core.mail import send_mail,EmailMessage
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -118,7 +118,7 @@ class RegisterView(APIView):
             response = Response({"detail": "Registration successful."}, status=201)
 
             # ✉️ Then send mail
-            send_welcome_email(user)
+            # send_welcome_email(user)
 
             return response
         return Response(serializer.errors, status=400)
@@ -463,6 +463,56 @@ class SetActiveBannerView(APIView):
             return Response({"detail": f"Banner {status_str} successfully."})
         except Banner.DoesNotExist:
             return Response({"detail": "Banner not found."}, status=404)
+
+
+class BrandLogoUploadView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = BrandLogoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Brand logo uploaded successfully.", "data": serializer.data})
+        return Response(serializer.errors, status=400)
+
+class BrandLogoListView(APIView):
+    def get(self, request):
+        logos = BrandLogo.objects.filter(active=True)
+        serializer = BrandLogoSerializer(logos, many=True)
+        return Response(serializer.data)
+
+class AdminBrandLogoList(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        logos = BrandLogo.objects.all().order_by('-uploaded_at')
+        serializer = BrandLogoSerializer(logos, many=True)
+        return Response(serializer.data)
+
+class BrandLogoDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def delete(self, request, logo_id):
+        try:
+            logo = BrandLogo.objects.get(pk=logo_id)
+            logo.delete()
+            return Response({"detail": "Brand logo deleted successfully."})
+        except BrandLogo.DoesNotExist:
+            return Response({"detail": "Brand logo not found."}, status=404)
+
+class SetActiveBrandLogoView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, logo_id):
+        try:
+            logo = BrandLogo.objects.get(pk=logo_id)
+            logo.active = not logo.active
+            logo.save()
+            status_str = "activated" if logo.active else "deactivated"
+            return Response({"detail": f"Brand logo {status_str} successfully."})
+        except BrandLogo.DoesNotExist:
+            return Response({"detail": "Brand logo not found."}, status=404)
 
 class UserDetailsWithMailboxView(APIView):
     permission_classes = [IsAuthenticated]

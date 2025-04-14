@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from authentication.views import RegisterView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList,AdminUpdateShipmentStatusView,AdminUserShipmentListView,ShippingCostByWeightView
+from authentication.views import RegisterView,AdminRegistrationView,UserLoginView,AdminLoginView,ProtectedView,MailboxView,DeleteMailboxView,Userlist,UserDetailsWithMailboxView,UpdateMailboxPriceView,GlobalAddressView,AddressBookView,SetDefaultAddressView,UserAddressListForAdminView,PasswordResetRequestView,PasswordResetConfirmView,ChangePasswordView,PayPalCheckoutView,PayPalExecutePaymentView,MailboxCheckoutDataView,GenerateUsername,AdminDeleteUserView,SuspiciousUserList,BlockedIPList,BannerUploadView,BannerListView,BannerDeleteView,SetActiveBannerView,AdminBannerList,AdminUpdateShipmentStatusView,AdminUserShipmentListView,ShippingCostByWeightView,BrandLogoUploadView, BrandLogoListView, AdminBrandLogoList, BrandLogoDeleteView, SetActiveBrandLogoView
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("admin/register/", AdminRegistrationView.as_view(), name="admin-register"),
@@ -37,4 +37,9 @@ urlpatterns = [
     path("admin/update-shipment-status/<int:shipment_id>/", AdminUpdateShipmentStatusView.as_view(), name="admin-user-shipments-update"),
     path("admin/user-shipments/<int:user_id>/", AdminUserShipmentListView.as_view(), name="admin-user-shipments"),
     path('shipping/price-by-weight/', ShippingCostByWeightView.as_view(), name='shipping-price-by-weight'),
+    path("admin/brand-logo/upload/", BrandLogoUploadView.as_view(), name="upload-brand-logo"),
+    path("brand-logos/", BrandLogoListView.as_view(), name="get-brand-logos"),
+    path("admin/brand-logos/", AdminBrandLogoList.as_view(), name="all-brand-logos"),
+    path("admin/brand-logo/delete/<int:logo_id>/", BrandLogoDeleteView.as_view(), name="delete-brand-logo"),
+    path("admin/brand-logo/set-active/<int:logo_id>/", SetActiveBrandLogoView.as_view(), name="set-active-brand-logo"),
 ]

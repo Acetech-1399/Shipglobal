@@ -61,6 +61,14 @@ class BannerSerializer(serializers.ModelSerializer):
         model = Banner
         fields = ['id', 'image', 'title', 'active', 'uploaded_at']
 
+# serializers.py
+
+class BrandLogoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BrandLogo
+        fields = ['id', 'image', 'title', 'active', 'uploaded_at']
+
+
 class MailboxSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mailbox
